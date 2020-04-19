@@ -2,7 +2,6 @@
 #       -fread (large datasets): data.table
 #       -Date variable casting: lubridate
 #       -handling data tables: dplyr
-
 library(data.table)
 library(dplyr)
 library(lubridate)
@@ -22,17 +21,20 @@ epowercon <- as_tibble(fread("household_power_consumption.txt"))
 # cast rest of columns (3 to 9) to numeric
 
 num_colnames <- names(epowercon)[3:9]
-epowercon %>% mutate(Date=dmy(Date),Time=hms(Time)) %>% mutate_at(num_colnames,as.numeric)->epowercon
+
+# combine Date and time into 1 variable, zse strptime to convert into POSIXlt variable
+# cast to PoSIXct as otherwise not accepted by dplyr
+date_and_time=with(epowercon,paste(Date,Time))
+epowercon %>% mutate(Date=dmy(Date),date_and_time=as.POSIXct(strptime(date_and_time,"%d/%m/%Y %H:%M:%S"))) %>% mutate_at(num_colnames,as.numeric)->epowercon
 
 # reduce dataset to entries from dates: 2007-02-01 and 2007-02-02 (ymd assumed) 
 
 date_th <- c("2007-02-01","2007-02-02")
 epowercon %>% filter(Date>=ymd(date_th[1]),Date<=ymd(date_th[2]))-> epowercon
 
-
-# histogramm, with red bars, breaks: default
-png(file="figure/plot1.png", width=480, height=480, units="px")
-hist(epowercon$Global_active_power,main="Global Active Power", xlab="Global Active Power (kilowatts)",col="red")
+# generate line plot, x=Date, y=Global active power and plot to png graphics device
+png(file="figure/plot2.png", width=480, height=480, units="px")
+plot(epowercon$date_and_time, epowercon$Global_active_power,xlab="", ylab="Global Active Power (kilowatts)",type="l")
 dev.off()
 
 
